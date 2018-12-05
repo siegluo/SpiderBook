@@ -1,4 +1,68 @@
-#coding:utf-8
+import os
+import random
+import time
+from multiprocessing import Process, Queue, Pipe
+from multiprocessing.dummy import Pool
+
+
+def run_proc(name):
+    print('%s, %s proc', name, os.getpid())
+
+
+def write_proc(a, urls):
+    for url in urls:
+        time.sleep(random.random())
+        a.put(url)
+
+
+def read_proc(a):
+    while True:
+        url = a.get(True)
+        print(url)
+
+
+def write_procp(p, urls):
+    for url in urls:
+        time.sleep(random.random())
+        p.send(url)
+
+
+def read_procp(p):
+    while True:
+        url = p.recv()
+        print(url)
+
+
+if __name__ == '__main__':
+    print('%s main', os.getpid())
+    p_list = []
+    for i in range(5):
+        p = Process(target=run_proc, args=str(i))
+        p_list.append(p)
+        print('start')
+        p_list[i].start()
+    for p in p_list:
+        p.join()
+    with Pool(processes=5) as p:
+        for i in range(5):
+            p.apply_async(run_proc(name=i))
+    print('end')
+    q = Queue()
+    p1 = Process(target=write_proc, args=(q, [1, 2, 3]))
+    p2 = Process(target=write_proc, args=(q, [4, 5, 6]))
+    p3 = Process(target=read_proc, args=(q,))
+    p1.start()
+    p2.start()
+    p3.start()
+    p1.join()
+    p2.join()
+    p3.terminate()
+    pipe = Pipe()
+    p4 = Process(target=write_procp, args=(pipe[0], [7, 8, 9]))
+    p5 = Process(target=read_procp, args=(pipe[1],))
+    p4.start()
+    p5.start()
+
 '''
 第一种方式：使用os模块中的fork方式实现多进程
 
